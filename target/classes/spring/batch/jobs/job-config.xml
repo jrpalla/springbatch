@@ -1,0 +1,65 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:batch="http://www.springframework.org/schema/batch" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/batch
+		http://www.springframework.org/schema/batch/spring-batch-2.2.xsd
+		http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+	">
+    <import resource="../config/context-config.xml" />
+	
+
+	<batch:job id="tableDataLoadJob" job-repository="jobRepository">
+		<batch:step id="initializeStep" next="loadStep">
+			<batch:tasklet ref="initializingTasklet" />
+		</batch:step>
+		 
+		<batch:step id="loadStep" next="finalizeStep">
+			<batch:tasklet task-executor="taskExecutor">
+				<batch:chunk reader="dbPaginatedItemReader" writer="dbPaginatedItemWriter"
+					commit-interval="100">
+				</batch:chunk>
+			</batch:tasklet>
+		</batch:step>
+		<batch:step id="finalizeStep">
+			<batch:tasklet ref="finalizingTasklet" />
+		</batch:step>
+	</batch:job>
+
+
+	<bean id="initializingTasklet" class="com.ansri.InitializingTask">
+		<property name="sessionFactory" ref="sessionFactory" />
+		<property name="table" value="SourceReport" />
+	</bean>
+	<bean id="finalizingTasklet" class="com.ansri.FinalizingTask" />
+
+
+	<bean id="taskExecutor"
+		class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+		<property name="corePoolSize" value="10" />
+		<property name="maxPoolSize" value="15" />
+		<!-- <property name="WaitForTasksToCompleteOnShutdown" value="false" /> -->
+	</bean>
+	<bean id="dbPaginatedItemReader" class="com.ansri.DbPaginatedItemReader">
+		<property name="sourceItemMapper" ref="sourceItemMapper" />
+		<property name="readLimit" value="100" />
+	</bean>
+
+	<bean id="dbPaginatedItemWriter" class="com.ansri.DbPaginatedItemWriter">
+		<property name="sessionFactory" ref="sessionFactory" />
+		<property name="batchUpdateSize" value="100"/>
+	</bean>
+	
+    <bean id="dbPaginatedItemReader1" class="com.ansri.model.DbPaginatedItemReader1">
+		<property name="sourceItemMapper" ref="sourceItemMapper" />
+		<property name="readLimit" value="100" />
+	</bean>
+
+	<bean id="dbPaginatedItemWriter1" class="com.ansri.model.DbPaginatedItemWriter1">
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+	<bean id="sourceItemMapper" class="com.ansri.SourceReportItemMapper" />
+	<!-- This is to make use of the spring provided test launcher -->
+
+	
+	
+</beans>

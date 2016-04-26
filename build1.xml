@@ -1,0 +1,89 @@
+<project name="spring-batch" default="main" xmlns:artifact="antlib:org.apache.maven.artifact.ant">
+	<description>
+		Create a Java Project (JAR) with Ant build script
+	</description>
+	<!--  http://stackoverflow.com/questions/1821803/creating-a-bundle-jar-with-ant 
+http://www.mkyong.com/ant/ant-create-a-fat-jar-file/ -->
+	<property name="projectName" value="spring-batch" />
+	<property name="src.dir" location="src/main/java" />
+	<property name="build.dir" location="bin" />
+	<property name="dist.dir" location="dist" />
+	<property name="dist.lib.dir" location="dist/lib" />
+	<property name="stag.lib.dir" location="stag/lib" />
+	<property name="stag.dir" location="stag" />
+	<property name="lib.dir" value="lib" />
+
+	<path id="maven-ant-tasks.classpath" path="c:\projects\jars\lib/maven-ant-tasks-2.1.3.jar" />
+
+	<!-- get maven dependencies and copy to staging lib folder automatically -->
+	<target name="resolve" description="retrieve maven dependencies ">
+
+		<artifact:dependencies filesetId="dependency.fileset"
+			useScope="runtime" type="jar">
+			<pom file="pom.xml"/>
+
+		</artifact:dependencies>
+		<copy todir="${stag.lib.dir}">
+			<fileset refid="dependency.fileset" />
+			<mapper classpathref="maven-ant-tasks.classpath"
+			          classname="org.apache.maven.artifact.ant.VersionMapper"
+			          from="${dependency.versions}" to="flatten" />
+		</copy>
+	</target>
+
+
+	<target name="init">
+		<mkdir dir="${build.dir}" />
+		<mkdir dir="${dist.dir}" />
+		<mkdir dir="${stag.dir}" />
+		<mkdir dir="${stag.lib.dir}" />
+		<mkdir dir="${dist.lib.dir}" />
+		<mkdir dir="${stag.dir}" />
+	</target>
+
+	<path id="classpath">
+		<fileset dir="${stag.lib.dir}/">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<!-- Need classpath to run this -->
+	<target name="compile" depends="init,resolve" description="compile the source ">
+		<javac includeantruntime="false" srcdir="${src.dir}" 
+                       destdir="${build.dir}" classpathref="classpath" />
+	</target>
+
+	<!-- Group all dependencies into a big dependency-all.jar -->
+	<target name="copy-dependencies">
+
+
+
+		<jar jarfile="${dist.lib.dir}/dependencies-all.jar">
+			<zipgroupfileset dir="${stag.lib.dir}">
+				<include name="**/*.jar" />
+			</zipgroupfileset>
+		</jar>
+
+	</target>
+
+	<!-- jar it, extract above dependency-all.jar and zip it with project files -->
+	<target name="jar" depends="compile, copy-dependencies" 
+                description="package, output to JAR">
+
+		<jar jarfile="${dist.dir}/${projectName}.jar" basedir="${build.dir}">
+
+			<zipfileset src="${dist.lib.dir}/dependencies-all.jar"/>
+		</jar>
+
+	</target>
+
+	<target name="clean" description="clean up">
+		<delete dir="${build.dir}" />
+		<delete dir="${dist.dir}" />
+		<delete dir="${stag.dir}" />
+	</target>
+
+	<!-- Default, run this -->
+	<target name="main" depends="clean, compile, jar" />
+
+</project>

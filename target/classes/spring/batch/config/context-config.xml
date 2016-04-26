@@ -1,0 +1,75 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+		http://www.springframework.org/schema/jdbc 
+		http://www.springframework.org/schema/jdbc/spring-jdbc-3.2.xsd">
+
+	<!-- connect to MySQL database -->
+	<bean id="dataSource1"
+		class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="jdbc:mysql://localhost:3306/test" />
+		<property name="username" value="root" />
+		<property name="password" value="" />
+	</bean>
+
+	
+	<!-- create job-meta tables automatically -->
+	<jdbc:initialize-database data-source="dataSource">
+		<jdbc:script location="org/springframework/batch/core/schema-drop-h2.sql" />
+		<jdbc:script location="org/springframework/batch/core/schema-h2.sql" />
+		<!-- <jdbc:script location="classpath:db/report-drop.sql"/> -->
+		<!-- <jdbc:script location="db/report-drop.sql"/> -->
+		<jdbc:script location="db/report.sql" />
+
+	</jdbc:initialize-database>
+
+	<jdbc:embedded-database id="dataSource" type="H2" />
+
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate3.annotation.AnnotationSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="annotatedClasses">
+			<list>
+				<value>com.ansri.model.Report</value>
+				<value>com.ansri.model.SourceReport</value>
+			</list>
+		</property>
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.H2Dialect</prop>
+				<prop key="hibernate.current_session_context_class">thread</prop>
+				<!-- <prop key="hibernate.show_sql">true</prop> -->
+				 <prop key="hibernate.jdbc.batch_size">50</prop>
+			</props>
+		</property>
+	</bean>
+ 	 
+ 	 <!-- stored job-meta in database -->
+	<bean id="jobRepository"
+		class="org.springframework.batch.core.repository.support.JobRepositoryFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="databaseType" value="h2" />
+		<property name="tablePrefix" value="BATCH_" />
+	</bean>
+	
+	<bean id="transactionManager"
+		class="org.springframework.batch.support.transaction.ResourcelessTransactionManager" />
+	 
+	<bean id="jobLauncher"
+		class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+		<property name="jobRepository" ref="jobRepository" />
+	</bean>
+
+<bean class="org.springframework.batch.test.JobLauncherTestUtils" />
+
+	<bean id="loadData" class="com.ansri.LoadTestData">
+		<constructor-arg ref="sessionFactory" />
+		<constructor-arg value="1000000" />
+	</bean>
+	
+	
+
+</beans>
